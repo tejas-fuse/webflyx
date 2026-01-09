@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebFlyx - GCP Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            line-height: 1.8;
+            color: #444;
+        }
+        
+        .content h2 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        .content p {
+            margin-bottom: 15px;
+        }
+        
+        .status {
+            background: #e8f4f8;
+            border-left: 4px solid #4CAF50;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #4CAF50;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        .features {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .features li {
+            padding: 10px 0;
+            padding-left: 30px;
+            position: relative;
+        }
+        
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 500;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        
+        .info-box {
+            background: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .info-box h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>☁️ GCP Integration</h1>
+        <p class="subtitle">Google Cloud Platform Integration for WebFlyx</p>
+        
+        <div class="status">
+            <span class="status-indicator"></span>
+            <strong>Status:</strong> Integration Active
+        </div>
+        
+        <div class="content">
+            <h2>Overview</h2>
+            <p>
+                WebFlyx leverages Google Cloud Platform (GCP) services to provide a robust, 
+                scalable infrastructure for managing and delivering classic movie content.
+            </p>
+            
+            <div class="info-box">
+                <h3>🔧 Current Configuration</h3>
+                <p>The application is configured to work seamlessly with the following GCP services:</p>
+                <ul class="features">
+                    <li>Cloud Storage - For storing movie data and assets</li>
+                    <li>Cloud Functions - For serverless backend operations</li>
+                    <li>Cloud CDN - For fast content delivery worldwide</li>
+                    <li>Cloud Monitoring - For application health tracking</li>
+                </ul>
+            </div>
+            
+            <h2>Features</h2>
+            <p>Our GCP integration provides the following capabilities:</p>
+            <ul class="features">
+                <li>Automatic scaling based on demand</li>
+                <li>Global content distribution</li>
+                <li>Secure data storage and access</li>
+                <li>Real-time monitoring and logging</li>
+                <li>Cost-effective resource management</li>
+            </ul>
+            
+            <div class="info-box">
+                <h3>📊 Performance Metrics</h3>
+                <p>
+                    <strong>Uptime:</strong> 99.9%<br>
+                    <strong>Average Response Time:</strong> 45ms<br>
+                    <strong>Data Processed:</strong> 2.3TB this month
+                </p>
+            </div>
+            
+            <h2>Getting Started</h2>
+            <p>
+                To configure your own GCP integration, please refer to the documentation 
+                or contact the development team for assistance. All necessary credentials 
+                and configuration files should be stored securely and never committed to 
+                version control.
+            </p>
+        </div>
+        
+        <div class="nav-links">
+            <a href="index.html">← Back to Search</a>
+            <a href="contents.md">Contents</a>
+            <a href="titles.md">Titles</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebFlyx - Classic Movies Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .search-box {
+            margin-bottom: 30px;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-help {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+        
+        .results-info {
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .movies-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .movies-table thead {
+            background: #667eea;
+            color: white;
+        }
+        
+        .movies-table th,
+        .movies-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .movies-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.2em;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .nav-links {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+        
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            margin: 0 15px;
+            font-weight: 500;
+        }
+        
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 WebFlyx</h1>
+        <p class="subtitle">Search Classic Movies Collection</p>
+        
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                class="search-input" 
+                placeholder="Search by title, director, or year..."
+                autocomplete="off"
+            >
+            <p class="search-help">Try searching for "Python", "Reiner", or "1985"</p>
+        </div>
+        
+        <div id="errorMessage"></div>
+        
+        <div id="resultsInfo" class="results-info"></div>
+        
+        <div id="results">
+            <div class="loading">Loading movies...</div>
+        </div>
+        
+        <div class="nav-links">
+            <a href="gcp.html">GCP Integration</a>
+            <a href="contents.md">Contents</a>
+            <a href="titles.md">Titles</a>
+        </div>
+    </div>
+
+    <script>
+        let allMovies = [];
+        
+        // Load and parse CSV data
+        async function loadMovies() {
+            try {
+                const response = await fetch('classics.csv');
+                if (!response.ok) {
+                    throw new Error('Failed to load movies data');
+                }
+                
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                // Skip header line and parse each movie
+                allMovies = lines.slice(1).map(line => {
+                    // Split by comma, but handle potential quotes
+                    const parts = line.split(',').map(part => part.trim());
+                    return {
+                        title: parts[0] || '',
+                        director: parts[1] || '',
+                        year: parts[2] || ''
+                    };
+                }).filter(movie => movie.title); // Filter out empty entries
+                
+                displayMovies(allMovies);
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                document.getElementById('errorMessage').innerHTML = 
+                    `<div class="error">Error loading movies: ${error.message}</div>`;
+                document.getElementById('results').innerHTML = '';
+            }
+        }
+        
+        // Display movies in a table
+        function displayMovies(movies) {
+            const resultsDiv = document.getElementById('results');
+            const resultsInfo = document.getElementById('resultsInfo');
+            
+            if (movies.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No movies found</div>';
+                resultsInfo.textContent = '';
+                return;
+            }
+            
+            resultsInfo.textContent = `Showing ${movies.length} movie${movies.length !== 1 ? 's' : ''}`;
+            
+            const table = `
+                <table class="movies-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Director</th>
+                            <th>Year</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${movies.map(movie => `
+                            <tr>
+                                <td>${escapeHtml(movie.title)}</td>
+                                <td>${escapeHtml(movie.director)}</td>
+                                <td>${escapeHtml(movie.year)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            resultsDiv.innerHTML = table;
+        }
+        
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Search functionality
+        function searchMovies(query) {
+            if (!query) {
+                displayMovies(allMovies);
+                return;
+            }
+            
+            const lowerQuery = query.toLowerCase();
+            const filtered = allMovies.filter(movie => 
+                movie.title.toLowerCase().includes(lowerQuery) ||
+                movie.director.toLowerCase().includes(lowerQuery) ||
+                movie.year.includes(lowerQuery)
+            );
+            
+            displayMovies(filtered);
+        }
+        
+        // Add event listener for search input
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            searchMovies(e.target.value);
+        });
+        
+        // Load movies on page load
+        loadMovies();
+    </script>
+</body>
+</html>
