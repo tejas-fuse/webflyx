@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebFlyx - Classic Movies Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .search-section {
+            padding: 30px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        #searchInput {
+            flex: 1;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            transition: border-color 0.3s;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .filter-option label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .results-info {
+            padding: 10px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .results-container {
+            padding: 0 30px 30px;
+        }
+
+        .movie-card {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .movie-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .movie-title {
+            font-size: 1.4em;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .movie-details {
+            display: flex;
+            gap: 20px;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .movie-detail {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .movie-detail strong {
+            color: #667eea;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .movie-details {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 WebFlyx</h1>
+            <p class="subtitle">Search Classic Movies</p>
+        </header>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="Search by title, director, or year..."
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="filter-options">
+                <div class="filter-option">
+                    <input type="checkbox" id="filterTitle" checked>
+                    <label for="filterTitle">Title</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="filterDirector" checked>
+                    <label for="filterDirector">Director</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="filterYear" checked>
+                    <label for="filterYear">Year</label>
+                </div>
+            </div>
+
+            <div class="results-info" id="resultsInfo"></div>
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div class="loading">Loading movies...</div>
+        </div>
+    </div>
+
+    <script>
+        let moviesData = [];
+
+        // Load CSV data
+        async function loadMovies() {
+            try {
+                const response = await fetch('classics.csv');
+                const csvText = await response.text();
+                
+                // Parse CSV
+                const lines = csvText.trim().split('\n');
+                moviesData = lines.slice(1).map(line => {
+                    // Simple CSV parsing (handles basic cases)
+                    const parts = line.split(',').map(part => part.trim());
+                    return {
+                        title: parts[0] || '',
+                        director: parts[1] || '',
+                        year: parts[2] || ''
+                    };
+                }).filter(movie => movie.title); // Filter out empty entries
+
+                // Display all movies initially
+                displayMovies(moviesData);
+                updateResultsInfo(moviesData.length, moviesData.length);
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                document.getElementById('resultsContainer').innerHTML = 
+                    '<div class="no-results">Error loading movies data. Please make sure classics.csv is available.</div>';
+            }
+        }
+
+        // Display movies
+        function displayMovies(movies) {
+            const container = document.getElementById('resultsContainer');
+            
+            if (movies.length === 0) {
+                container.innerHTML = '<div class="no-results">No movies found matching your search.</div>';
+                return;
+            }
+
+            container.innerHTML = movies.map(movie => `
+                <div class="movie-card">
+                    <div class="movie-title">${escapeHtml(movie.title)}</div>
+                    <div class="movie-details">
+                        <div class="movie-detail">
+                            <strong>Director:</strong>
+                            <span>${escapeHtml(movie.director)}</span>
+                        </div>
+                        <div class="movie-detail">
+                            <strong>Year:</strong>
+                            <span>${escapeHtml(movie.year)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Update results info
+        function updateResultsInfo(showing, total) {
+            const info = document.getElementById('resultsInfo');
+            if (showing === total) {
+                info.textContent = `Showing all ${total} movies`;
+            } else {
+                info.textContent = `Showing ${showing} of ${total} movies`;
+            }
+        }
+
+        // Search movies
+        function searchMovies() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const filterTitle = document.getElementById('filterTitle').checked;
+            const filterDirector = document.getElementById('filterDirector').checked;
+            const filterYear = document.getElementById('filterYear').checked;
+
+            if (!searchTerm) {
+                displayMovies(moviesData);
+                updateResultsInfo(moviesData.length, moviesData.length);
+                return;
+            }
+
+            const filtered = moviesData.filter(movie => {
+                let matches = false;
+                
+                if (filterTitle && movie.title.toLowerCase().includes(searchTerm)) {
+                    matches = true;
+                }
+                if (filterDirector && movie.director.toLowerCase().includes(searchTerm)) {
+                    matches = true;
+                }
+                if (filterYear && movie.year.toLowerCase().includes(searchTerm)) {
+                    matches = true;
+                }
+                
+                return matches;
+            });
+
+            displayMovies(filtered);
+            updateResultsInfo(filtered.length, moviesData.length);
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', searchMovies);
+        document.getElementById('filterTitle').addEventListener('change', searchMovies);
+        document.getElementById('filterDirector').addEventListener('change', searchMovies);
+        document.getElementById('filterYear').addEventListener('change', searchMovies);
+
+        // Load movies on page load
+        loadMovies();
+    </script>
+</body>
+</html>
