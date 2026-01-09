@@ -329,17 +329,26 @@
                 return;
             }
 
+            // If no filters are selected, search all fields
+            const searchAll = !filterTitle && !filterDirector && !filterYear;
+
             const filtered = moviesData.filter(movie => {
                 let matches = false;
                 
-                if (filterTitle && movie.title.toLowerCase().includes(searchTerm)) {
-                    matches = true;
+                if (searchAll || filterTitle) {
+                    if (movie.title.toLowerCase().includes(searchTerm)) {
+                        matches = true;
+                    }
                 }
-                if (filterDirector && movie.director.toLowerCase().includes(searchTerm)) {
-                    matches = true;
+                if (searchAll || filterDirector) {
+                    if (movie.director.toLowerCase().includes(searchTerm)) {
+                        matches = true;
+                    }
                 }
-                if (filterYear && movie.year.toLowerCase().includes(searchTerm)) {
-                    matches = true;
+                if (searchAll || filterYear) {
+                    if (movie.year.toLowerCase().includes(searchTerm)) {
+                        matches = true;
+                    }
                 }
                 
                 return matches;
