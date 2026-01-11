@@ -131,6 +131,10 @@ async function fetchQuotes() {
     for (const file of quoteFiles) {
         try {
             const response = await fetch(`quotes/${file}`);
+            if (!response.ok) {
+                console.warn(`Could not load quotes from ${file}: ${response.status} ${response.statusText}`);
+                continue; // Skip this file and continue with others
+            }
             const text = await response.text();
             
             // Parse markdown list items
@@ -141,9 +145,9 @@ async function fetchQuotes() {
                 .map(quote => quote.replace(/^[""]|[""]$/g, ''))
                 .filter(quote => quote.length > 0);
             
-            // Extract source name from filename (e.g., 'dune.md' -> 'Dune')
+            // Extract source name from filename (e.g., 'dune.md' -> 'Dune', 'star-wars.md' -> 'Star Wars')
             const source = file.replace('.md', '')
-                .split(' ')
+                .split(/[-_\s]/)
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
             
@@ -153,7 +157,8 @@ async function fetchQuotes() {
             
             console.log(`Loaded ${quotes.length} quotes from ${file}`);
         } catch (error) {
-            console.error(`Error fetching quotes from ${file}:`, error);
+            console.warn(`Error fetching quotes from ${file}:`, error);
+            // Continue loading other files even if one fails
         }
     }
 }
