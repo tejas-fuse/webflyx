@@ -44,7 +44,7 @@ async function initializeApp() {
         
     } catch (error) {
         console.error('Error initializing app:', error);
-        showError('Failed to load movie data. Please refresh the page.');
+        showError(error.message || 'Failed to load movie data. Please refresh the page and try again.');
     } finally {
         showLoading(false);
     }
@@ -56,6 +56,9 @@ async function initializeApp() {
 async function fetchTitles() {
     try {
         const response = await fetch('titles.md');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch titles.md: ${response.status} ${response.statusText}`);
+        }
         const text = await response.text();
         
         // Parse markdown list items
@@ -73,6 +76,7 @@ async function fetchTitles() {
         console.log(`Loaded ${titles.length} titles from titles.md`);
     } catch (error) {
         console.error('Error fetching titles:', error);
+        throw new Error('Unable to load movie titles. Please check your internet connection and try again.');
     }
 }
 
@@ -82,6 +86,9 @@ async function fetchTitles() {
 async function fetchClassics() {
     try {
         const response = await fetch('classics.csv');
+        if (!response.ok) {
+            throw new Error(`Failed to fetch classics.csv: ${response.status} ${response.statusText}`);
+        }
         const text = await response.text();
         
         // Parse CSV
@@ -93,7 +100,8 @@ async function fetchClassics() {
             const line = lines[i].trim();
             if (line.length === 0) continue;
             
-            // Parse CSV line (simple parsing for comma-separated values)
+            // Parse CSV line - simple CSV parser that handles basic comma-separated values
+            // This works for the current data format where fields don't contain commas
             const parts = line.split(',').map(part => part.trim());
             
             if (parts.length >= 3) {
@@ -110,6 +118,7 @@ async function fetchClassics() {
         console.log(`Loaded ${classics.length} classics from classics.csv`);
     } catch (error) {
         console.error('Error fetching classics:', error);
+        throw new Error('Unable to load classic movies. Please check your internet connection and try again.');
     }
 }
 
