@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebFlyx - Your Movie Collection</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header Section -->
+    <header class="header">
+        <div class="container">
+            <h1 class="logo">WebFlyx</h1>
+            <nav class="nav">
+                <a href="#movies">Movies</a>
+                <a href="#quotes">Quotes</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section with Search -->
+    <section class="hero">
+        <div class="container">
+            <h2 class="hero-title">Discover Your Next Favorite Movie</h2>
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Search movies by title..."
+                    aria-label="Search movies"
+                >
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Tabs -->
+    <section class="filters" id="movies">
+        <div class="container">
+            <div class="filter-tabs">
+                <button class="filter-tab active" data-filter="all">All Movies</button>
+                <button class="filter-tab" data-filter="titles">Modern Titles</button>
+                <button class="filter-tab" data-filter="classics">Classics</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Loading State -->
+    <div class="loading-container" id="loadingState">
+        <div class="loading-spinner"></div>
+        <p>Loading movies...</p>
+    </div>
+
+    <!-- Movies Grid -->
+    <section class="movies-section">
+        <div class="container">
+            <div class="movies-grid" id="moviesGrid">
+                <!-- Movie cards will be dynamically inserted here -->
+            </div>
+            <div class="no-results" id="noResults" style="display: none;">
+                <h3>No movies found</h3>
+                <p>Try adjusting your search or filters</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quotes Section -->
+    <section class="quotes-section" id="quotes">
+        <div class="container">
+            <h2 class="section-title">Memorable Quotes</h2>
+            <div class="quotes-grid" id="quotesGrid">
+                <!-- Quotes will be dynamically inserted here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>WebFlyx - A Movie Collection Web Application</p>
+            <p>
+                <a href="https://github.com/tejas-fuse/webflyx" target="_blank" rel="noopener">
+                    View on GitHub
+                </a>
+            </p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
