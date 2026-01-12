@@ -1,17 +1,29 @@
 /**
- * WebFlyx - Movie Collection Web Application
- * Main JavaScript file for data fetching, filtering, and UI interactions
+ * WebFlyx - Book Discovery & Reading Web Application
+ * Main JavaScript file for data fetching, book search, filtering, and UI interactions
  */
 
 // Global state management
 const appState = {
-    movies: {
+    books: {
         titles: [],
-        classics: []
+        classics: [],
+        searchResults: []
     },
     quotes: [],
     currentFilter: 'all',
-    searchQuery: ''
+    searchQuery: '',
+    pdfOnlyFilter: false,
+    isSearching: false
+};
+
+// API Configuration
+const API_CONFIG = {
+    openLibrary: {
+        search: 'https://openlibrary.org/search.json',
+        covers: 'https://covers.openlibrary.org/b',
+        works: 'https://openlibrary.org/works'
+    }
 };
 
 /**
@@ -39,12 +51,12 @@ async function initializeApp() {
         setupEventListeners();
         
         // Initial render
-        renderMovies();
+        renderBooks();
         renderQuotes();
         
     } catch (error) {
         console.error('Error initializing app:', error);
-        showError(error.message || 'Failed to load movie data. Please refresh the page and try again.');
+        showError(error.message || 'Failed to load book data. Please refresh the page and try again.');
     } finally {
         showLoading(false);
     }
@@ -68,15 +80,16 @@ async function fetchTitles() {
             .map(line => line.trim().replace(/^-\s*/, ''))
             .filter(title => title.length > 0);
         
-        appState.movies.titles = titles.map(title => ({
+        appState.books.titles = titles.map(title => ({
             title,
-            type: 'titles'
+            type: 'titles',
+            source: 'local'
         }));
         
         console.log(`Loaded ${titles.length} titles from titles.md`);
     } catch (error) {
         console.error('Error fetching titles:', error);
-        throw new Error('Unable to load movie titles. Please check your internet connection and try again.');
+        throw new Error('Unable to load book titles. Please check your internet connection and try again.');
     }
 }
 
@@ -100,25 +113,25 @@ async function fetchClassics() {
             const line = lines[i].trim();
             if (line.length === 0) continue;
             
-            // Parse CSV line - simple CSV parser that handles basic comma-separated values
-            // This works for the current data format where fields don't contain commas
+            // Parse CSV line
             const parts = line.split(',').map(part => part.trim());
             
             if (parts.length >= 3) {
                 classics.push({
                     title: parts[0],
-                    director: parts[1],
+                    author: parts[1],
                     year: parts[2],
-                    type: 'classics'
+                    type: 'classics',
+                    source: 'local'
                 });
             }
         }
         
-        appState.movies.classics = classics;
+        appState.books.classics = classics;
         console.log(`Loaded ${classics.length} classics from classics.csv`);
     } catch (error) {
         console.error('Error fetching classics:', error);
-        throw new Error('Unable to load classic movies. Please check your internet connection and try again.');
+        throw new Error('Unable to load classic books. Please check your internet connection and try again.');
     }
 }
 
@@ -169,9 +182,25 @@ async function fetchQuotes() {
 function setupEventListeners() {
     // Search input
     const searchInput = document.getElementById('searchInput');
-    searchInput.addEventListener('input', (e) => {
-        appState.searchQuery = e.target.value.toLowerCase();
-        renderMovies();
+    const searchButton = document.getElementById('searchButton');
+    const pdfOnlyFilter = document.getElementById('pdfOnlyFilter');
+    
+    // Search on button click
+    searchButton.addEventListener('click', () => {
+        performSearch();
+    });
+    
+    // Search on Enter key
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    // PDF filter
+    pdfOnlyFilter.addEventListener('change', (e) => {
+        appState.pdfOnlyFilter = e.target.checked;
+        renderBooks();
     });
     
     // Filter tabs
@@ -184,106 +213,380 @@ function setupEventListeners() {
             
             // Update filter and re-render
             appState.currentFilter = e.target.dataset.filter;
-            renderMovies();
+            renderBooks();
         });
+    });
+    
+    // Modal close handlers
+    const modalClose = document.getElementById('modalClose');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const bookModal = document.getElementById('bookModal');
+    
+    modalClose.addEventListener('click', () => closeModal());
+    modalOverlay.addEventListener('click', () => closeModal());
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && bookModal.style.display !== 'none') {
+            closeModal();
+        }
     });
 }
 
 /**
- * Render movies based on current filter and search query
+ * Perform book search using Open Library API
  */
-function renderMovies() {
-    const moviesGrid = document.getElementById('moviesGrid');
+async function performSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const query = searchInput.value.trim();
+    
+    if (!query) {
+        return;
+    }
+    
+    appState.searchQuery = query;
+    appState.isSearching = true;
+    showLoading(true);
+    
+    try {
+        const response = await fetch(
+            `${API_CONFIG.openLibrary.search}?q=${encodeURIComponent(query)}&limit=20&fields=key,title,author_name,first_publish_year,cover_i,isbn,subject,publisher,ebook_access,has_fulltext`
+        );
+        
+        if (!response.ok) {
+            throw new Error('Search request failed');
+        }
+        
+        const data = await response.json();
+        
+        // Transform API results to our book format
+        appState.books.searchResults = data.docs.map(book => ({
+            title: book.title,
+            author: book.author_name ? book.author_name.join(', ') : 'Unknown Author',
+            year: book.first_publish_year || 'N/A',
+            coverUrl: book.cover_i ? `${API_CONFIG.openLibrary.covers}/id/${book.cover_i}-M.jpg` : null,
+            isbn: book.isbn ? book.isbn[0] : null,
+            subjects: book.subject ? book.subject.slice(0, 3) : [],
+            publisher: book.publisher ? book.publisher[0] : null,
+            hasPdf: book.ebook_access === 'public' || book.has_fulltext,
+            key: book.key,
+            type: 'search',
+            source: 'api'
+        }));
+        
+        // Switch to search results filter
+        appState.currentFilter = 'search';
+        document.querySelector('[data-filter="search"]').classList.add('active');
+        document.querySelectorAll('.filter-tab:not([data-filter="search"])').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        renderBooks();
+        
+    } catch (error) {
+        console.error('Error searching books:', error);
+        showError('Failed to search books. Please check your internet connection and try again.');
+    } finally {
+        showLoading(false);
+        appState.isSearching = false;
+    }
+}
+
+/**
+ * Render books based on current filter and search query
+ */
+function renderBooks() {
+    const booksGrid = document.getElementById('booksGrid');
     const noResults = document.getElementById('noResults');
     
-    // Get filtered movies
-    let movies = getFilteredMovies();
+    // Get filtered books
+    let books = getFilteredBooks();
     
     // Clear grid
-    moviesGrid.innerHTML = '';
+    booksGrid.innerHTML = '';
     
     // Show/hide no results message
-    if (movies.length === 0) {
+    if (books.length === 0) {
         noResults.style.display = 'block';
         return;
     } else {
         noResults.style.display = 'none';
     }
     
-    // Render movie cards
-    movies.forEach((movie, index) => {
-        const card = createMovieCard(movie, index);
-        moviesGrid.appendChild(card);
+    // Render book cards
+    books.forEach((book, index) => {
+        const card = createBookCard(book, index);
+        booksGrid.appendChild(card);
     });
 }
 
 /**
- * Get filtered movies based on current filter and search query
+ * Get filtered books based on current filter and search query
  */
-function getFilteredMovies() {
-    let movies = [];
+function getFilteredBooks() {
+    let books = [];
     
     // Apply collection filter
     if (appState.currentFilter === 'all') {
-        movies = [...appState.movies.titles, ...appState.movies.classics];
+        books = [...appState.books.titles, ...appState.books.classics, ...appState.books.searchResults];
     } else if (appState.currentFilter === 'titles') {
-        movies = [...appState.movies.titles];
+        books = [...appState.books.titles];
     } else if (appState.currentFilter === 'classics') {
-        movies = [...appState.movies.classics];
+        books = [...appState.books.classics];
+    } else if (appState.currentFilter === 'search') {
+        books = [...appState.books.searchResults];
     }
     
-    // Apply search filter
-    if (appState.searchQuery) {
-        movies = movies.filter(movie => 
-            movie.title.toLowerCase().includes(appState.searchQuery)
-        );
+    // Apply PDF filter
+    if (appState.pdfOnlyFilter) {
+        books = books.filter(book => book.hasPdf);
     }
     
-    return movies;
+    return books;
 }
 
 /**
- * Create a movie card element
+ * Create a book card element
  */
-function createMovieCard(movie, index) {
+function createBookCard(book, index) {
     const card = document.createElement('div');
-    card.className = 'movie-card';
+    card.className = 'book-card';
     card.style.animationDelay = `${(index % 5) * 0.05}s`;
     
-    const title = document.createElement('h3');
-    title.className = 'movie-title';
-    title.textContent = movie.title;
+    // Cover container
+    const coverContainer = document.createElement('div');
+    coverContainer.className = 'book-cover-container';
     
-    const info = document.createElement('div');
-    info.className = 'movie-info';
-    
-    // Add director and year for classics
-    if (movie.type === 'classics') {
-        if (movie.director) {
-            const director = document.createElement('div');
-            director.className = 'movie-detail';
-            director.innerHTML = `<strong>Director:</strong> ${movie.director}`;
-            info.appendChild(director);
-        }
-        
-        if (movie.year) {
-            const year = document.createElement('div');
-            year.className = 'movie-detail';
-            year.innerHTML = `<strong>Year:</strong> ${movie.year}`;
-            info.appendChild(year);
-        }
+    if (book.coverUrl) {
+        const cover = document.createElement('img');
+        cover.className = 'book-cover';
+        cover.src = book.coverUrl;
+        cover.alt = `${book.title} cover`;
+        cover.loading = 'lazy';
+        cover.onerror = () => {
+            coverContainer.innerHTML = '<div class="book-cover-placeholder">📚</div>';
+        };
+        coverContainer.appendChild(cover);
+    } else {
+        coverContainer.innerHTML = '<div class="book-cover-placeholder">📚</div>';
     }
     
-    // Add collection badge
-    const badge = document.createElement('span');
-    badge.className = `movie-badge ${movie.type}`;
-    badge.textContent = movie.type === 'titles' ? 'Modern' : 'Classic';
+    // Title
+    const title = document.createElement('h3');
+    title.className = 'book-title';
+    title.textContent = book.title;
     
-    card.appendChild(title);
-    card.appendChild(info);
-    card.appendChild(badge);
+    // Author
+    const author = document.createElement('div');
+    author.className = 'book-author';
+    author.textContent = book.author || 'Unknown Author';
+    
+    // Info section
+    const info = document.createElement('div');
+    info.className = 'book-info';
+    
+    // Add year for all books
+    if (book.year) {
+        const year = document.createElement('div');
+        year.className = 'book-detail';
+        year.textContent = `Published: ${book.year}`;
+        info.appendChild(year);
+    }
+    
+    // Add subjects for API books
+    if (book.subjects && book.subjects.length > 0) {
+        const subjects = document.createElement('div');
+        subjects.className = 'book-detail';
+        subjects.textContent = book.subjects.join(', ');
+        info.appendChild(subjects);
+    }
+    
+    // Badges
+    const badges = document.createElement('div');
+    badges.className = 'book-badges';
+    
+    // Type badge
+    const typeBadge = document.createElement('span');
+    typeBadge.className = `book-badge ${book.type}`;
+    if (book.type === 'titles') {
+        typeBadge.textContent = 'Modern';
+    } else if (book.type === 'classics') {
+        typeBadge.textContent = 'Classic';
+    } else if (book.type === 'search') {
+        typeBadge.className = 'book-badge search-result';
+        typeBadge.textContent = 'Online';
+    }
+    badges.appendChild(typeBadge);
+    
+    // PDF badge
+    if (book.hasPdf) {
+        const pdfBadge = document.createElement('span');
+        pdfBadge.className = 'book-badge pdf-available';
+        pdfBadge.textContent = 'PDF Available';
+        badges.appendChild(pdfBadge);
+    }
+    
+    // Actions (for API books with PDF)
+    if (book.source === 'api') {
+        const actions = document.createElement('div');
+        actions.className = 'book-actions';
+        
+        const detailsBtn = document.createElement('button');
+        detailsBtn.className = 'book-action-btn primary';
+        detailsBtn.textContent = 'Details';
+        detailsBtn.onclick = (e) => {
+            e.stopPropagation();
+            showBookDetails(book);
+        };
+        actions.appendChild(detailsBtn);
+        
+        if (book.hasPdf && book.key) {
+            const readBtn = document.createElement('a');
+            readBtn.className = 'book-action-btn';
+            readBtn.textContent = 'Read Online';
+            readBtn.href = `https://openlibrary.org${book.key}`;
+            readBtn.target = '_blank';
+            readBtn.rel = 'noopener noreferrer';
+            readBtn.onclick = (e) => e.stopPropagation();
+            actions.appendChild(readBtn);
+        }
+        
+        card.appendChild(coverContainer);
+        card.appendChild(title);
+        card.appendChild(author);
+        card.appendChild(info);
+        card.appendChild(badges);
+        card.appendChild(actions);
+    } else {
+        // For local books, make entire card clickable
+        card.style.cursor = 'default';
+        
+        card.appendChild(coverContainer);
+        card.appendChild(title);
+        if (book.author) {
+            card.appendChild(author);
+        }
+        card.appendChild(info);
+        card.appendChild(badges);
+    }
     
     return card;
+}
+
+/**
+ * Show book details in modal
+ */
+function showBookDetails(book) {
+    const modal = document.getElementById('bookModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    const details = document.createElement('div');
+    details.className = 'modal-book-details';
+    
+    // Header with cover and basic info
+    const header = document.createElement('div');
+    header.className = 'modal-book-header';
+    
+    // Cover
+    const coverDiv = document.createElement('div');
+    coverDiv.className = 'modal-book-cover';
+    if (book.coverUrl) {
+        const largeCoverUrl = book.coverUrl.replace('-M.jpg', '-L.jpg');
+        coverDiv.innerHTML = `<img src="${largeCoverUrl}" alt="${book.title} cover" onerror="this.parentElement.innerHTML='<div class=\\'book-cover-placeholder\\' style=\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;\\'>📚</div>'">`;
+    } else {
+        coverDiv.innerHTML = '<div class="book-cover-placeholder" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;">📚</div>';
+    }
+    
+    // Info
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'modal-book-info';
+    
+    const modalTitle = document.createElement('h2');
+    modalTitle.className = 'modal-book-title';
+    modalTitle.id = 'modalTitle';
+    modalTitle.textContent = book.title;
+    
+    const modalAuthor = document.createElement('div');
+    modalAuthor.className = 'modal-book-author';
+    modalAuthor.textContent = book.author;
+    
+    const meta = document.createElement('div');
+    meta.className = 'modal-book-meta';
+    
+    if (book.year) {
+        const yearDiv = document.createElement('div');
+        yearDiv.innerHTML = `<strong>Year:</strong> ${book.year}`;
+        meta.appendChild(yearDiv);
+    }
+    
+    if (book.publisher) {
+        const pubDiv = document.createElement('div');
+        pubDiv.innerHTML = `<strong>Publisher:</strong> ${book.publisher}`;
+        meta.appendChild(pubDiv);
+    }
+    
+    if (book.isbn) {
+        const isbnDiv = document.createElement('div');
+        isbnDiv.innerHTML = `<strong>ISBN:</strong> ${book.isbn}`;
+        meta.appendChild(isbnDiv);
+    }
+    
+    infoDiv.appendChild(modalTitle);
+    infoDiv.appendChild(modalAuthor);
+    infoDiv.appendChild(meta);
+    
+    header.appendChild(coverDiv);
+    header.appendChild(infoDiv);
+    
+    // Subjects
+    if (book.subjects && book.subjects.length > 0) {
+        const description = document.createElement('div');
+        description.className = 'modal-book-description';
+        description.innerHTML = `<strong>Subjects:</strong> ${book.subjects.join(', ')}`;
+        details.appendChild(header);
+        details.appendChild(description);
+    } else {
+        details.appendChild(header);
+    }
+    
+    // Actions
+    const actions = document.createElement('div');
+    actions.className = 'modal-book-actions';
+    
+    if (book.hasPdf && book.key) {
+        const readBtn = document.createElement('a');
+        readBtn.className = 'modal-action-btn';
+        readBtn.textContent = '📖 Read Online';
+        readBtn.href = `https://openlibrary.org${book.key}`;
+        readBtn.target = '_blank';
+        readBtn.rel = 'noopener noreferrer';
+        actions.appendChild(readBtn);
+    }
+    
+    const viewBtn = document.createElement('a');
+    viewBtn.className = 'modal-action-btn secondary';
+    viewBtn.textContent = 'View on Open Library';
+    viewBtn.href = `https://openlibrary.org${book.key}`;
+    viewBtn.target = '_blank';
+    viewBtn.rel = 'noopener noreferrer';
+    actions.appendChild(viewBtn);
+    
+    details.appendChild(actions);
+    
+    modalBody.innerHTML = '';
+    modalBody.appendChild(details);
+    modal.style.display = 'flex';
+    
+    // Focus management for accessibility
+    modalTitle.focus();
+}
+
+/**
+ * Close the modal
+ */
+function closeModal() {
+    const modal = document.getElementById('bookModal');
+    modal.style.display = 'none';
 }
 
 /**
@@ -332,8 +635,8 @@ function showLoading(show) {
  * Show error message
  */
 function showError(message) {
-    const moviesGrid = document.getElementById('moviesGrid');
-    moviesGrid.innerHTML = `
+    const booksGrid = document.getElementById('booksGrid');
+    booksGrid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-secondary);">
             <h3>⚠️ Error</h3>
             <p>${message}</p>
